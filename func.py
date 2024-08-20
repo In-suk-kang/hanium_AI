@@ -74,8 +74,12 @@ def default_preprocessing(filepath):
 
 def preprocessing(filepath):
     code = ""
-    with open(filepath,'r') as file:
-        code += file.read()
+    if os.path.isfile(filepath):
+        with open(filepath,'r') as file:
+            code += file.read()
+    else:
+        code = filepath
+    
     def default_code_clean(text):
         pattern = r'call void @llvm.dbg.declare.*?\n'
         text = re.sub(pattern, '', text)
@@ -233,25 +237,62 @@ def preprocessing(filepath):
     pad_rev = pad_sequences(encd_rev, maxlen=4466, padding='pre')
     
     #--------------------------------------------------------------------------
-    # def sentences_ai_process(list_code):
-    #     result = []
-    # # 리스트 코드는 리스트 각각으로 처리
-    #     for code in list_code:
-    #         if code == '':
-    #             continue
-    #         code = func_preprocessing(code)
-    #         code = create_tokens(code)
-    #         encd_rev = tok.texts_to_sequences([code])
-    #         pad_rev = pad_sequences(encd_rev, maxlen=4466, padding='pre')
-    #         result.append(ai_process(pad_rev))
-    #         return result
+    
     #--------------------------------------------------------------------------
-    return pad_rev
+    return pad_rev,tok
+#--------------------------------------------------------
+def sentences_ai_process(filepath):
+    result = []
+    code = ""
+    with open(filepath,'r') as file:
+        code += file.read()
+    codes = code.split('\n')
+    for code in codes:
+        if code == '':
+            continue
+        print(code)
+        pad_rev,_ = preprocessing(code)
+        with open('saved_model.pkl','rb') as file:
+            model = pickle.load(file)
+            pred = model.predict(pad_rev)
+        print(pred)
+    return result
 
-def ai_process(seq_data):
+
+def create_sliding_windows(data, window_size, step_size,tok):
+    result = []
+    data = data.flatten()  # (1, N) -> (N,)
+    texts = []
+    num_windows = (len(data) - window_size) // step_size + 1
+    print(f"Number of windows to be created: {num_windows}")
+    
+    for i in range(num_windows):
+        start_index = i * step_size
+        end_index = start_index + window_size
+        window = data[start_index:end_index]
+        print(f"Processing window from index {start_index} to {end_index}")
+        
+        # 윈도우를 (1, window_size) 형태로 변환
+        window = window.reshape(1, -1)
+        
+        # 패딩 적용
+        pad_rev = pad_sequences(window, maxlen=4466, padding='pre')
+        
+        # 모델 예측 수행 (ai_process는 정의된 모델을 사용해야 함)
+        prediction = ai_process(pad_rev,0.8)
+        if prediction == 1:
+            print("성공")
+            text = tok.sequences_to_texts(pad_rev)
+            texts.append(text)
+            print(text)
+        result.append(prediction)
+    
+    return result
+#--------------------------------------------------------
+def ai_process(seq_data,value = 0.5):
     with open('saved_model.pkl','rb') as file:
         model = pickle.load(file)
     pred = model.predict(seq_data)
-    predict_result = (pred > 0.5).astype(int).tolist()
+    predict_result = (pred > value).astype(int).flatten().tolist()[0]
     return predict_result
 

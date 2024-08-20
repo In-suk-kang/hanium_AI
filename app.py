@@ -1,6 +1,6 @@
 from flask import Flask,render_template,request,jsonify
 from werkzeug.utils import secure_filename
-from func import c2llvm,preprocessing,ai_process,default_preprocessing
+from func import c2llvm,preprocessing,ai_process,default_preprocessing,sentences_ai_process,create_sliding_windows
 import os
 app = Flask(__name__)
 
@@ -14,8 +14,14 @@ def predict():
     #1. c -> llmv ir
     llvm_code = c2llvm(c_code)
     #2. llvm ir 전처리
+    
     llvm_code = default_preprocessing(llvm_code)
-    sequence_data= preprocessing(llvm_code.name)
+    sentence = sentences_ai_process(llvm_code.name)
+    print(sentence)
+    sequence_data,_= preprocessing(llvm_code.name)
+    # result2 = create_sliding_windows(sequence_data,100,100,_)
+    # print(result2)
+
     #3. 모델 결과 분석
     result = ai_process(sequence_data)
     print(sequence_data)
