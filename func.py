@@ -241,53 +241,50 @@ def preprocessing(filepath):
     #--------------------------------------------------------------------------
     return pad_rev,tok
 #--------------------------------------------------------
-def sentences_ai_process(filepath):
-    result = []
-    code = ""
-    with open(filepath,'r') as file:
-        code += file.read()
-    codes = code.split('\n')
-    for code in codes:
-        if code == '':
-            continue
-        print(code)
-        pad_rev,_ = preprocessing(code)
-        with open('saved_model.pkl','rb') as file:
-            model = pickle.load(file)
-            pred = model.predict(pad_rev)
-        print(pred)
-    return result
+# def sentences_ai_process(filepath):
+#     result = []
+#     code = ""
+#     with open(filepath,'r') as file:
+#         code += file.read()
+#     codes = code.split('\n')
+#     for code in codes:
+#         if code == '':
+#             continue
+#         print(code)
+#         pad_rev,_ = preprocessing(code)
+#         with open('saved_model.pkl','rb') as file:
+#             model = pickle.load(file)
+#             pred = model.predict(pad_rev)
+#         print(pred)
+#     return result
 
 
-def create_sliding_windows(data, window_size, step_size,tok):
-    result = []
+def create_sliding_windows(data, window_size, step_size, tok):
     data = data.flatten()  # (1, N) -> (N,)
-    texts = []
     num_windows = (len(data) - window_size) // step_size + 1
+    maxi = float('-inf')
     print(f"Number of windows to be created: {num_windows}")
+    text = ""
+    
+    with open('saved_model.pkl', 'rb') as file:
+        model = pickle.load(file)
     
     for i in range(num_windows):
         start_index = i * step_size
         end_index = start_index + window_size
         window = data[start_index:end_index]
         print(f"Processing window from index {start_index} to {end_index}")
-        
-        # 윈도우를 (1, window_size) 형태로 변환
         window = window.reshape(1, -1)
-        
-        # 패딩 적용
         pad_rev = pad_sequences(window, maxlen=4466, padding='pre')
-        
-        # 모델 예측 수행 (ai_process는 정의된 모델을 사용해야 함)
-        prediction = ai_process(pad_rev,0.8)
-        if prediction == 1:
-            print("성공")
+        pred = model.predict(pad_rev)
+        pred_value = pred[0]
+        if pred_value > maxi:
+            maxi = pred_value
             text = tok.sequences_to_texts(pad_rev)
-            texts.append(text)
-            print(text)
-        result.append(prediction)
-    
-    return result
+    return text
+#--------------------------------------------------------
+# def find_line(filepath,text):
+
 #--------------------------------------------------------
 def ai_process(seq_data,value = 0.5):
     with open('saved_model.pkl','rb') as file:
