@@ -9,58 +9,45 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import gensim
 from gensim.models import Word2Vec
 from tensorflow.keras.preprocessing.text import Tokenizer
-import os
-import subprocess
-
-import os
-import subprocess
 
 def c2llvm(file):
     if file.filename.endswith('.c'):
         # 파일 경로 정의
         input_file = os.path.join('./files', file.filename)
         llvm_file = os.path.join('./files', file.filename.replace('.c', '.ll'))
-        object_file = os.path.join('./files', file.filename.replace('.c', '.o'))
-        pdb_file = os.path.join('./files', file.filename.replace('.c', '.pdb'))
-
-        # C 파일을 LLVM IR 파일로 컴파일
-        clang_to_ll_command = [
-            'clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', llvm_file
-        ]
-        subprocess.run(clang_to_ll_command, check=True)
-
-        # C 파일을 오브젝트 파일로 컴파일, PDB 파일도 생성
-        clang_to_obj_command = [
-            'clang', '-gcodeview', '-I ./files', '-c', input_file, '-o', object_file
-        ]
-        subprocess.run(clang_to_obj_command, check=True)
-
-        # llvm-dwarfdump 명령어 구성
-        dbg_command = ['llvm-dwarfdump', '--debug-info', object_file]
 
         try:
-            # llvm-dwarfdump 명령어 실행
-            dbg_result = subprocess.run(dbg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            
-            # 디버깅을 위한 출력 확인
-            print("llvm-dwarfdump stdout:", dbg_result.stdout)
-            print("llvm-dwarfdump stderr:", dbg_result.stderr)
-            
-            return llvm_file, dbg_result.stdout
+            # C 파일을 LLVM IR로 컴파일
+            subprocess.run(
+                ['clang', '-g', '-O0', '-S', '-emit-llvm', input_file, '-o', llvm_file],
+                check=True,
+                text=True
+            )
         except subprocess.CalledProcessError as e:
-            print(f"Command failed with exit code {e.returncode}")
-            print(f"Error output: {e.stderr}")
-            return llvm_file, None
+            print(f"Error during compilation: {e.stderr}")
+            raise
+        
+        # LLVM IR 파일 생성 확인
+        if os.path.exists(llvm_file):
+            return llvm_file
+        else:
+            raise RuntimeError("LLVM IR 파일이 생성되지 않았습니다.")
     else:
         raise FileNotFoundError("파일이 C 소스 코드 파일이 아닙니다.")
-
 
     
 def default_preprocessing(filepath):
     search_keywords = ['CWE', 'good', 'bad']
+    dbg_dict = {}
     with open(filepath, 'r') as file:
         lines = file.readlines()
-
+    
+    for line in lines:
+        if line.startswith('!'):
+            key,value = line.split('=',1)
+            key.strip()
+            value.strip()
+            dbg_dict[key] = value
     identifier_counter = {}
     count = 1
     new_lines = []
@@ -94,10 +81,9 @@ def default_preprocessing(filepath):
                             line = re.sub(rf'\b{identifier}\b', new_identifier, line)
             
             new_lines.append(line)
-    
     with open(filepath, 'w') as file:
         file.writelines(new_lines)
-    return file
+    return file,dbg_dict
 
 def preprocessing(filepath):
     code = ""
@@ -339,3 +325,34 @@ def ai_process(seq_data,value = 0.5):
 # clang_command = ['clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', result_file]
 #--------------------------------------------------------
 
+import re
+
+def vul_c(text, dbg_dict):
+    # 딕셔너리의 키와 값에서 공백 제거
+    dbg_dict = {key.strip(): value.strip() for key, value in dbg_dict.items()}
+    print(dbg_dict)
+    pattern = r'![0-9]+'
+    
+    # 텍스트에서 모든 패턴 찾기
+    matches = re.findall(pattern, text)
+    
+    # 중복 제거 및 순서 유지
+    seen = set()
+    unique_matches = []
+    for match in matches:
+        if match not in seen:
+            seen.add(match)
+            unique_matches.append(match)
+    
+    # 고유한 매치에 대해 dbg_dict에서 값 가져오기
+    result = []
+    for match in unique_matches:
+        if match in dbg_dict:
+            result.append(dbg_dict[match])
+        else:
+            result.append(None)  # 없을 경우 적절한 기본값
+    
+    print(result)
+
+            
+    
