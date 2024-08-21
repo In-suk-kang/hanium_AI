@@ -12,23 +12,50 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 import os
 import subprocess
 
+import os
+import subprocess
+
 def c2llvm(file):
     if file.filename.endswith('.c'):
-        # LLVM IR 결과를 저장할 파일 이름 정의
+        # 파일 경로 정의
         input_file = os.path.join('./files', file.filename)
-        result_file = os.path.join('./files', file.filename.replace('.c', '.ll'))
-        
-        # clang 명령어를 구성
-        clang_command = ['clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', result_file]
-        
-        # clang 명령어 실행
-        subprocess.run(clang_command, check=True)
-        
-        # 결과 파일 경로 반환
-        return result_file
+        llvm_file = os.path.join('./files', file.filename.replace('.c', '.ll'))
+        object_file = os.path.join('./files', file.filename.replace('.c', '.o'))
+        pdb_file = os.path.join('./files', file.filename.replace('.c', '.pdb'))
+
+        # C 파일을 LLVM IR 파일로 컴파일
+        clang_to_ll_command = [
+            'clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', llvm_file
+        ]
+        subprocess.run(clang_to_ll_command, check=True)
+
+        # C 파일을 오브젝트 파일로 컴파일, PDB 파일도 생성
+        clang_to_obj_command = [
+            'clang', '-gcodeview', '-I ./files', '-c', input_file, '-o', object_file
+        ]
+        subprocess.run(clang_to_obj_command, check=True)
+
+        # llvm-dwarfdump 명령어 구성
+        dbg_command = ['llvm-dwarfdump', '--debug-info', object_file]
+
+        try:
+            # llvm-dwarfdump 명령어 실행
+            dbg_result = subprocess.run(dbg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            
+            # 디버깅을 위한 출력 확인
+            print("llvm-dwarfdump stdout:", dbg_result.stdout)
+            print("llvm-dwarfdump stderr:", dbg_result.stderr)
+            
+            return llvm_file, dbg_result.stdout
+        except subprocess.CalledProcessError as e:
+            print(f"Command failed with exit code {e.returncode}")
+            print(f"Error output: {e.stderr}")
+            return llvm_file, None
     else:
         raise FileNotFoundError("파일이 C 소스 코드 파일이 아닙니다.")
 
+
+    
 def default_preprocessing(filepath):
     search_keywords = ['CWE', 'good', 'bad']
     with open(filepath, 'r') as file:
@@ -141,14 +168,14 @@ def preprocessing(filepath):
         pattern = r'\[\s*(.*?)\s*\]'
         text = re.sub(pattern, lambda m: '[' + ''.join(m.group(1).split()) + ']', text) # [] 괄호안에 있는 공백 제거
 
-        pattern = r'![0-9]+'
-        text = re.sub(pattern, '', text)
+        # pattern = r'![0-9]+'
+        # text = re.sub(pattern, '', text)
 
         pattern = r'#[0-9]+'
         text = re.sub(pattern, '', text)
 
-        pattern = r'!dbg'
-        text = re.sub(pattern,'', text)
+        # pattern = r'!dbg'
+        # text = re.sub(pattern,'', text)
 
         pattern = r'\n'
         text = re.sub(pattern,'', text)
@@ -260,6 +287,7 @@ def preprocessing(filepath):
 
 
 def create_sliding_windows(data, window_size, step_size, tok):
+    old_code = ' '.join(tok.sequences_to_texts(data))
     data = data.flatten()  # (1, N) -> (N,)
     num_windows = (len(data) - window_size) // step_size + 1
     maxi = float('-inf')
@@ -280,11 +308,22 @@ def create_sliding_windows(data, window_size, step_size, tok):
         pred_value = pred[0]
         if pred_value > maxi:
             maxi = pred_value
-            text = tok.sequences_to_texts(pad_rev)
+            text = ' '.join(tok.sequences_to_texts(pad_rev))
+    text = find_line(old_code,text)
     return text
 #--------------------------------------------------------
-# def find_line(filepath,text):
-
+def find_line(old_code, text):
+    pattern = re.escape(text)
+    match = re.search(pattern, old_code)
+    if match:
+        start = old_code.rfind(',', 0, match.start()) + 1
+        end = old_code.find(',', match.end())
+        if end == -1:
+            end = len(old_code)
+        
+        line = old_code[start:end]
+        return line
+    return None
 #--------------------------------------------------------
 def ai_process(seq_data,value = 0.5):
     with open('saved_model.pkl','rb') as file:
@@ -292,4 +331,11 @@ def ai_process(seq_data,value = 0.5):
     pred = model.predict(seq_data)
     predict_result = (pred > value).astype(int).flatten().tolist()[0]
     return predict_result
+
+# input_file = os.path.join('./files', file.filename)
+# result_file = os.path.join('./files', file.filename.replace('.c', '.ll'))
+        
+#         # clang 명령어를 구성
+# clang_command = ['clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', result_file]
+#--------------------------------------------------------
 

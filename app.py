@@ -12,12 +12,10 @@ def predict():
         os.makedirs(directory)
     c_code.save(directory + secure_filename(c_code.filename))    
     #1. c -> llmv ir
-    llvm_code = c2llvm(c_code)
+    llvm_code,dbg= c2llvm(c_code)
+    print(dbg)
     #2. llvm ir 전처리
-    
     llvm_code = default_preprocessing(llvm_code)
-    # sentence = sentences_ai_process(llvm_code.name)
-    # print(sentence)
     sequence_data,tok= preprocessing(llvm_code.name)
     tttt = create_sliding_windows(sequence_data,100,100,tok)
     print(tttt)
