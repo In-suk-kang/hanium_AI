@@ -248,28 +248,7 @@ def preprocessing(filepath):
     tok.fit_on_texts([code])
     encd_rev = tok.texts_to_sequences([code])
     pad_rev = pad_sequences(encd_rev, maxlen=4466, padding='pre')
-    
-    #--------------------------------------------------------------------------
-    
-    #--------------------------------------------------------------------------
     return pad_rev,tok
-#--------------------------------------------------------
-# def sentences_ai_process(filepath):
-#     result = []
-#     code = ""
-#     with open(filepath,'r') as file:
-#         code += file.read()
-#     codes = code.split('\n')
-#     for code in codes:
-#         if code == '':
-#             continue
-#         print(code)
-#         pad_rev,_ = preprocessing(code)
-#         with open('saved_model.pkl','rb') as file:
-#             model = pickle.load(file)
-#             pred = model.predict(pad_rev)
-#         print(pred)
-#     return result
 
 
 def create_sliding_windows(data, window_size, step_size, tok):
@@ -318,19 +297,10 @@ def ai_process(seq_data,value = 0.5):
     predict_result = (pred > value).astype(int).flatten().tolist()[0]
     return predict_result
 
-# input_file = os.path.join('./files', file.filename)
-# result_file = os.path.join('./files', file.filename.replace('.c', '.ll'))
-        
-#         # clang 명령어를 구성
-# clang_command = ['clang', '-g', '-I ./files', '-S', '-emit-llvm', input_file, '-o', result_file]
 #--------------------------------------------------------
-
-import re
-
 def vul_c(text, dbg_dict):
     # 딕셔너리의 키와 값에서 공백 제거
     dbg_dict = {key.strip(): value.strip() for key, value in dbg_dict.items()}
-    print(dbg_dict)
     pattern = r'![0-9]+'
     
     # 텍스트에서 모든 패턴 찾기
@@ -351,8 +321,4 @@ def vul_c(text, dbg_dict):
             result.append(dbg_dict[match])
         else:
             result.append(None)  # 없을 경우 적절한 기본값
-    
-    print(result)
-
-            
-    
+    return result

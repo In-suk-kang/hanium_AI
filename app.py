@@ -16,14 +16,14 @@ def predict():
     #2. llvm ir 전처리
     llvm_code,dbg_dict = default_preprocessing(llvm_code)
     sequence_data,tok= preprocessing(llvm_code.name)
-    vul_text = create_sliding_windows(sequence_data,100,100,tok)
-    a = vul_c(vul_text,dbg_dict)
     #3. 모델 결과 분석
     result = ai_process(sequence_data)
-
-    # 취약여부, 취약종류, 취약라인 = ai_process(llvm_code)
-    return jsonify(result)
-
-
+    if result == 1:
+        vul_text = create_sliding_windows(sequence_data,100,100,tok)
+        a = vul_c(vul_text,dbg_dict)
+        return jsonify({"vul" : 1, "lines" : a})
+    else:
+        return jsonify({"vul": 0})    
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
