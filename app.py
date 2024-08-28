@@ -1,6 +1,8 @@
 from flask import Flask,render_template,request,jsonify
 from werkzeug.utils import secure_filename
-from func import c2llvm,preprocessing,ai_process,default_preprocessing,create_sliding_windows,vul_c
+from func import preprocessing,ai_process,create_sliding_windows,vul_c
+from file_preprocessing import default_preprocessing
+from c2llvm import c2llvm
 import os
 app = Flask(__name__)
 
