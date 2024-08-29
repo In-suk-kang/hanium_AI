@@ -68,7 +68,7 @@ def find_line(old_code, text):
     return None
 #--------------------------------------------------------
 def ai_process(seq_data,value = 0.5):
-    with open('saved_model.pkl','rb') as file:
+    with open('model.pkl','rb') as file:
         model = pickle.load(file)
     pred = model.predict(seq_data)
     predict_result = (pred > value).astype(int).flatten().tolist()[0]
