@@ -36,7 +36,7 @@ def create_sliding_windows(data, window_size, step_size, tok):
     print(f"Number of windows to be created: {num_windows}")
     text = ""
     
-    with open('saved_model.pkl', 'rb') as file:
+    with open('model.pkl', 'rb') as file:
         model = pickle.load(file)
     
     for i in range(num_windows):
