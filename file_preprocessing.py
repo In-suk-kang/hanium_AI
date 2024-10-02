@@ -1,21 +1,13 @@
 import re
 def default_preprocessing(filepath):
     search_keywords = ['CWE', 'good', 'bad']
-    dbg_dict = {}
     with open(filepath, 'r') as file:
         lines = file.readlines()
     
-    for line in lines:
-        if line.startswith('!'):
-            key,value = line.split('=',1)
-            key.strip()
-            value.strip()
-            dbg_dict[key] = value
     identifier_counter = {}
     count = 1
     new_lines = []
     within_code_section = False
-
     for line in lines:
         # Skip lines before 'target triple'
         if "target triple" in line:
@@ -46,4 +38,4 @@ def default_preprocessing(filepath):
             new_lines.append(line)
     with open(filepath, 'w') as file:
         file.writelines(new_lines)
-    return file,dbg_dict
+    return file

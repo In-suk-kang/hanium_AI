@@ -1,3 +1,4 @@
+from collections import defaultdict
 import re
 def default_code_clean(text):
   pattern = r'call void @llvm.dbg.declare.*?\n'
@@ -13,7 +14,7 @@ def default_code_clean(text):
   text = re.sub(pattern, '', text)
   return text
 
-from collections import defaultdict
+
 
 def preprocess_llvm_code(llvm_code):
     var_counter = 1
