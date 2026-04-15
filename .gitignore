@@ -1,0 +1,4 @@
+*.c
+*.ll
+__pycache__
+.vscode/
